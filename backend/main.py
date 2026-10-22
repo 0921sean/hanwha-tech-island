@@ -10,6 +10,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.core import (Catalog, DailyBudget, DailyLimitError, EvidenceError, EXPLANATION_FIELDS,
@@ -283,3 +284,9 @@ async def ask(request: AskRequest):
         budget.record(error=True)
         logger.warning("Provider answer failed evidence or schema validation")
         raise HTTPException(503, "답변의 출처를 검증하지 못했어요. 기존 화면을 유지하고 다시 시도해 주세요.") from None
+
+
+# Docker deployments include the Vite build; local API-only runs do not require it.
+DIST = BASE.parent / "dist"
+if DIST.is_dir():
+    app.mount("/", StaticFiles(directory=DIST, html=True), name="game")
