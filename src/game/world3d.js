@@ -1,4 +1,4 @@
-// Original, code-built 3D village. No third-party game artwork is used.
+// Code-built 3D village with selected GLB house and character replacements.
 import { HOUSES, houseById } from '../data/houses.js';
 const LEGACY_HOUSES = [[-11, -6], [10, -8], [9, 8]];
 const COMPANY = {
@@ -267,11 +267,12 @@ function cottage(k, parent, x, z, config, animated) {
   } else {
     const awning = k.rounded(g, 0, 2.66, 2.95, 2.2, 0.18, 1.1, config.color, 0.06); awning.rotation.x = 0.12;
     for (const ax of [-0.96, 0.96]) k.cylinder(g, ax, 1.4, 3.32, 0.045, 0.045, 2.6, '#cba475', 6);
-    k.board(g, config.name, '문까지 걸어가면 들어갈 수 있어요', 0, 3.43, 3.34, 4.5);
+    const mainSign=k.board(g, config.name, config.signSubtitle || '문까지 걸어가면 들어갈 수 있어요', 0, 3.43, 3.34, 4.5);
     iconModel(k, g, config.icon, 0, 5.3, -0.35, 0.65, animated);
     if (aeroHome) {
       // Keep the shared doorway while giving this home its own business sign.
-      k.board(g, '우주 · 항공 · 지상 · 해양', '모아와 함께 기술 탐험', 0, 4.65, 3.33, 3.35, '#865944');
+      const detailSign=k.board(g, '우주 · 항공 · 지상 · 해양', '모아와 함께 기술 탐험', 0, 4.65, 3.33, 3.35, '#865944');
+      g.userData.nameplateFallback=[mainSign,detailSign];
       for (const wx of [-2.08, 2.08]) for (const side of [-1, 1]) {
         k.rounded(g, wx + side * .75, 1.96, 2.8, .19, 1.32, .08, '#ad7658', .03);
         for (const dy of [-.34, 0, .34]) k.box(g, wx + side * .75, 1.96 + dy, 2.85, .15, .035, .02, '#f1d2a6');
@@ -363,7 +364,8 @@ export function buildExterior(THREE, companyId = 'hub') {
   }
   k.cylinder(group,0,.025,3,3.1,3.1,.045,'#e4d0a0',32);
   const facilities = id === 'hub' ? HOUSES : Object.keys(FACILITY).filter(f=>FACILITY[f].company===id).map((facilityId,index)=>({id:facilityId,x:LEGACY_HOUSES[index][0],z:LEGACY_HOUSES[index][1]}));
-  let oceanHouse = null;
+  let oceanHouse = null, systemsHouse = null, aeroHouse = null;
+  const futureHouses=[];
   facilities.forEach(home => {
     const {id:facilityId,x,z}=home;
     const homeCompany=COMPANY[home.companyId]||company;
@@ -378,12 +380,31 @@ export function buildExterior(THREE, companyId = 'hub') {
       const mount=k.group(group,x,0,z);
       mount.userData.facilityId='lng';
       oceanHouse={fallback:house,mount};
+    } else if(id==='hub' && facilityId==='launch') {
+      house.userData.dynamic=true;
+      house.visible=false;
+      const mount=k.group(group,x,0,z);
+      mount.userData.facilityId='launch';
+      systemsHouse={fallback:house,mount};
+    } else if(id==='hub' && facilityId==='combat') {
+      house.userData.dynamic=true;
+      house.visible=false;
+      const mount=k.group(group,x,0,z);
+      mount.userData.facilityId='combat';
+      aeroHouse={fallback:house,mount};
+    } else if(facilityId==='radar'||facilityId==='engine') {
+      house.userData.dynamic=true;
+      house.visible=false;
+      const mount=k.group(group,x,0,z);
+      mount.userData.facilityId=facilityId;
+      futureHouses.push({id:facilityId,fallback:house,mount});
     }
-    doors.push({id:facilityId,pivot:house.userData.doorPivot});
+    const comingSoon=facilityId==='radar'||facilityId==='engine';
+    if(!comingSoon)doors.push({id:facilityId,pivot:house.userData.doorPivot});
     delete house.userData.doorPivot;
     house.userData.facilityId=facilityId;
     colliders.push({minX:x-3.6,maxX:x+3.6,minZ:z-2.6,maxZ:z+2.6});
-    triggers.push({id:facilityId,type:'enter',x,z:z+3.55,radius:1,label:id==='hub'?`${home.name} · 문으로 걸어가 입장`:undefined});
+    triggers.push({id:facilityId,type:comingSoon?'coming-soon':'enter',x,z:z+3.55,radius:1,label:comingSoon?'입주 예정입니다':id==='hub'?`${home.name} · 문으로 걸어가 입장`:undefined});
   });
   if(id==='hub') {
     // Oversized landmarks read clearly from the path: radar, rocket and ship.
@@ -402,7 +423,6 @@ export function buildExterior(THREE, companyId = 'hub') {
     const ship=iconModel(k,group,'lng',33.4,.07,-10,2.4,animated);
     ship.rotation.y=.12;
     for(const zz of[-4,4]) {const wake=k.mesh(group,new THREE.TorusGeometry(1.7,.035,4,32,Math.PI),'#e5f6eb',34,.055,-10+zz);wake.rotation.x=-Math.PI/2;}
-    k.board(group,'바다에 떠 있는 배','한화오션의 해양 기술을 만나보세요',31.5,1.45,-4.6,4.4);
   }
   outdoorDecoration(k,group,colliders,animated,id);
   // Keep the player-facing camera clear of a tall foreground arch.
@@ -411,14 +431,14 @@ export function buildExterior(THREE, companyId = 'hub') {
     k.rounded(group,0,3.1,24,5.6,.55,.4,company.color,.12);
     k.board(group,'중앙 마을로 돌아가기','이 관문 아래로 걸어가세요',0,3.12,24.3,5);
     triggers.push({id:'hub',type:'company',x:0,z:24,radius:1});
-  } else k.board(group,'어서 와요, 기술의 섬','섬의 다섯 집을 찾아 걸어가 보세요',-6,1.5,17,3.6);
+  }
   planter(k,group,-8,24,'#eab2b2');planter(k,group,8,24,'#f2d177');
   k.board(group,company.name,company.subtitle,0,1.5,-25,5.6);
   for(const x of[-2.1,2.1])k.cylinder(group,x,.6,-25.1,.07,.07,1.2,'#bc966b',6);
   // A few simple ripples around the shore.
   for(let i=0;i<6;i++){const ripple=k.mesh(group,new THREE.TorusGeometry(1.4+i*.15,.025,3,26,Math.PI*.85),'#c3e9e6',-26+i*10,-.35,23+(i%2));ripple.rotation.x=-Math.PI/2;ripple.rotation.z=i;}
   batchStatic(THREE,group,animated);
-  return {group,colliders,triggers,interactables,doors,oceanHouse,spawn:{x:0,z:20},bounds:{minX:-32,maxX:32,minZ:-27,maxZ:27},animated,label:company.name};
+  return {group,colliders,triggers,interactables,doors,oceanHouse,systemsHouse,aeroHouse,futureHouses,spawn:{x:0,z:20},bounds:{minX:-32,maxX:32,minZ:-27,maxZ:27},animated,label:company.name};
 }
 
 function guide(k,p,x,z,color,name='안내원') {
@@ -485,7 +505,7 @@ export function buildInterior(THREE, facilityId = 'radar') {
   if(facilityId==='launch') return buildSystemsInterior(THREE);
   const home=houseById(facilityId);
   const primary=FACILITY[facilityId]||FACILITY.radar;
-  const info=home?{...primary,name:home.name,text:home.subtitle}:primary;
+  const info=home?{...primary,name:home.name,text:home.signSubtitle||home.subtitle}:primary;
   const company=COMPANY[home?.companyId||primary.company],k=kit(THREE),group=new THREE.Group(),animated=[],colliders=[];
   // Cutaway room: no front wall, so the camera can always see the player.
   k.rounded(group,0,-.17,.5,14.8,.32,11.8,'#ba9874',.12);
@@ -553,8 +573,10 @@ export function buildInterior(THREE, facilityId = 'radar') {
   const third=home?.topics[2];
   if(third){iconModel(k,group,third,-4.9,1.05,-1.5,.38,animated);k.board(group,FACILITY[third].name,'E  가까이에서 살펴보기',-5,2.18,-1.5,2.8);}
   const residentFallback=guide(k,group,-3,1.8,home?.residentColor||company.color,home?.resident);
-  if(facilityId==='lng')residentFallback.visible=false;
-  const resident=facilityId==='lng'?{mount:residentFallback.parent,fallback:residentFallback}:null;
+  if(facilityId==='lng'||facilityId==='combat')residentFallback.visible=false;
+  const resident=facilityId==='lng'||facilityId==='combat'
+    ?{mount:residentFallback.parent,fallback:residentFallback,modelUrl:facilityId==='lng'?'/models/ocean_c.glb':'/models/robot_bird.glb',name:facilityId==='lng'?'파도':'모아'}
+    :null;
   colliders.push({minX:-3.35,maxX:-2.65,minZ:1.45,maxZ:2.15});
   k.board(group,home?`주민 ${home.resident}`:'안녕! 전시물에 다가가 봐요',home?'E 키로 주민과 이야기해요':'E 키로 기술 이야기를 열어요',-3,2.55,1.8,3.2);
   planter(k,group,-6.15,-3.9,'#e4ae9f',1.6);planter(k,group,6.1,4.35,'#f2d58f',1.5);

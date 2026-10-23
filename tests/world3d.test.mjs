@@ -38,13 +38,22 @@ for (const company of ['hub', 'systems', 'aerospace', 'ocean']) {
       }
       if(company === 'hub') {
         assert.equal(world.triggers.find(trigger => trigger.id === 'lng').z, HOUSES.find(home => home.id === 'lng').z + 3.55);
+        assert.equal(world.systemsHouse?.fallback.visible,false,'systems fallback stays hidden until its model and sign load');
+        assert.equal(world.systemsHouse?.mount.userData.facilityId,'launch');
+        assert.equal(world.aeroHouse?.mount.userData.facilityId,'combat');
+        assert.equal(world.aeroHouse.fallback.visible,false,'aero cottage stays hidden until its model and sign load');
+        assert.deepEqual(new Set(world.futureHouses.map(house=>house.id)),new Set(['radar','engine']));
+        assert.ok(world.futureHouses.every(house=>!house.fallback.visible),'future house placeholders stay hidden while their models load');
+        assert.deepEqual(world.triggers.filter(trigger=>trigger.type==='coming-soon').map(trigger=>trigger.id).sort(),['engine','radar']);
+        assert.ok(world.triggers.filter(trigger=>trigger.type==='coming-soon').every(trigger=>trigger.label==='입주 예정입니다'));
+        assert.ok(world.doors.find(door=>door.id==='launch')?.pivot);
       }
       assert.equal(world.group.type, 'Group');
       assert.ok(isPositionWalkable(world.spawn, world.colliders, world.bounds));
       const doors = world.triggers.filter(t => t.type === 'enter');
-      assert.equal(doors.length, company === 'hub' ? 5 : 3);
+      assert.equal(world.triggers.filter(t=>['enter','coming-soon'].includes(t.type)).length,company === 'hub' ? 5 : 3);
       assert.equal(world.doors.length, doors.length);
-      if(company === 'hub')assert.deepEqual(new Set(doors.map(d=>d.id)),new Set(HOUSES.map(h=>h.id)));
+      if(company === 'hub')assert.deepEqual(new Set(world.triggers.map(d=>d.id)),new Set(HOUSES.map(h=>h.id)));
       for (const door of world.triggers) {
         assertRoute(world, door);
         let position = { ...world.spawn };
@@ -100,6 +109,8 @@ for (const id of ['radar','satellite','combat','engine','launch','ground','lng',
 test('aero house has a reachable video and right-hand interactive workshop',()=>{
  const world=buildInterior(THREE,'combat');
  try{
+  assert.equal(world.resident.modelUrl,'/models/robot_bird.glb');
+  assert.equal(world.resident.fallback.visible,false);
   for(const id of ['aero-video','aero-exhibit']){
    const exhibit=world.interactables.find(i=>i.id===id);
    assert.ok(exhibit);
@@ -131,6 +142,7 @@ test('ocean house keeps a reachable video and two learning exhibits',()=>{
  try{
   assert.equal(world.label,'오션의 집');
   assert.equal(world.resident.fallback.visible,false,'outdated resident stays hidden until the GLB settles');
+  assert.equal(world.resident.modelUrl,'/models/ocean_c.glb');
   assert.equal(world.oceanDivisionShip.fallback.visible,false,'old ship stays hidden while the supplied GLB loads');
   for(const id of ['ocean-video','ocean-divisions','offshore']){
    const exhibit=world.interactables.find(i=>i.id===id);

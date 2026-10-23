@@ -26,11 +26,12 @@ export function disposeGroup(group) {
   materials.forEach(value => value.dispose());
 }
 
-function oceanNameplate(texture) {
+function houseNameplate(texture,{width=3.3,x=-.2,y=3.76,z=2.14}={}) {
   const group=new THREE.Group();
   texture.colorSpace=THREE.SRGBColorSpace;
-  const face=new THREE.Mesh(new THREE.PlaneGeometry(3.3,1.47),new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.04,side:THREE.DoubleSide,depthWrite:false}));
-  face.position.set(-.2,3.76,2.14);group.add(face);
+  const height=width*texture.image.height/texture.image.width;
+  const face=new THREE.Mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.04,side:THREE.DoubleSide,depthWrite:false}));
+  face.position.set(x,y,z);group.add(face);
   return group;
 }
 
@@ -57,7 +58,7 @@ function loadOceanExterior(world) {
       if(/^(Front_Door|Door_Planks|Door_Handle|Door_Porthole|Door_Hardware)__/.test(node.name))doorParts.push(node);
       if(node.isMesh){node.castShadow=true;node.receiveShadow=true;}
     });
-    mount.add(model,oceanNameplate(texture));
+    mount.add(model,houseNameplate(texture));
     const hinge=new THREE.Group();hinge.position.set(-.69,0,1.75);model.add(hinge);
     model.updateMatrixWorld(true);
     for(const part of doorParts)hinge.attach(part);
@@ -69,21 +70,105 @@ function loadOceanExterior(world) {
   return {ready,cancel(){cancelled=true;}};
 }
 
-function loadOceanResident(world) {
-  if(!world.resident)return noAssetLoad();
-  const {mount,fallback}=world.resident;
+function loadSystemsExterior(world) {
+  if(!world.systemsHouse)return noAssetLoad();
+  const {mount,fallback}=world.systemsHouse;
   let cancelled=false;
-  const ready=new GLTFLoader().loadAsync('/models/tori_turtle.glb').then(({scene:model})=>{
+  const ready=Promise.allSettled([
+    new GLTFLoader().loadAsync('/models/system_house.glb'),
+    new THREE.TextureLoader().loadAsync('/images/system-house-nameplate.png'),
+  ]).then(([modelResult,textureResult])=>{
+    if(cancelled||modelResult.status==='rejected'||textureResult.status==='rejected'){
+      if(modelResult.status==='fulfilled')disposeGroup(modelResult.value.scene);
+      if(textureResult.status==='fulfilled')textureResult.value.dispose();
+      if(!cancelled)fallback.visible=true;
+      return;
+    }
+    const model=modelResult.value.scene,texture=textureResult.value;
+    const doorParts=[];
+    model.traverse(node=>{
+      if(['Arched wooden door','Door plank joint','Door handle','Door diamond glass'].includes(node.name))doorParts.push(node);
+      if(node.isMesh){node.castShadow=true;node.receiveShadow=true;}
+    });
+    mount.add(model,houseNameplate(texture,{width:3.3,x:0,y:4.17,z:2.43}));
+    const hinge=new THREE.Group();hinge.position.set(-.715,0,2.08);model.add(hinge);
+    model.updateMatrixWorld(true);
+    for(const part of doorParts)hinge.attach(part);
+    const door=world.doors.find(item=>item.id==='launch');
+    if(door)door.pivot=hinge;
+  }).catch(()=>{if(!cancelled)fallback.visible=true;});
+  return {ready,cancel(){cancelled=true;}};
+}
+
+function loadAeroExterior(world) {
+  if(!world.aeroHouse)return noAssetLoad();
+  const {mount,fallback}=world.aeroHouse;
+  let cancelled=false;
+  const ready=Promise.allSettled([
+    new GLTFLoader().loadAsync('/models/aero_house.glb'),
+    new THREE.TextureLoader().loadAsync('/images/aero-house-nameplate.png'),
+  ]).then(([modelResult,textureResult])=>{
+    if(cancelled||modelResult.status==='rejected'||textureResult.status==='rejected'){
+      if(modelResult.status==='fulfilled')disposeGroup(modelResult.value.scene);
+      if(textureResult.status==='fulfilled')textureResult.value.dispose();
+      if(!cancelled)fallback.visible=true;
+      return;
+    }
+    const model=modelResult.value.scene,texture=textureResult.value;
+    const doorParts=[];
+    model.traverse(node=>{
+      if(['Olive arched door','Door plank seam','Door window frame','Door window glass','Door window mullion','Door window cross','Brass doorknob'].includes(node.name))doorParts.push(node);
+      if(node.isMesh){node.castShadow=true;node.receiveShadow=true;}
+    });
+    mount.add(model,houseNameplate(texture,{width:3.4,x:0,y:4.45,z:2.75}));
+    const hinge=new THREE.Group();hinge.position.set(-.25,0,2.3);model.add(hinge);
+    model.updateMatrixWorld(true);
+    for(const part of doorParts)hinge.attach(part);
+    const door=world.doors.find(item=>item.id==='combat');
+    if(door)door.pivot=hinge;
+  }).catch(()=>{if(!cancelled)fallback.visible=true;});
+  return {ready,cancel(){cancelled=true;}};
+}
+
+function loadFutureExteriors(world) {
+  if(!world.futureHouses?.length)return noAssetLoad();
+  let cancelled=false;
+  const ready=Promise.all(world.futureHouses.map(async ({id,mount,fallback})=>{
+    const power=id==='radar';
+    const name=power?'power':'engine';
+    const [modelResult,textureResult]=await Promise.allSettled([
+      new GLTFLoader().loadAsync(`/models/${name}_house.glb`),
+      new THREE.TextureLoader().loadAsync(`/images/${name}-house-nameplate.png`),
+    ]);
+    if(cancelled||modelResult.status==='rejected'||textureResult.status==='rejected'){
+      if(modelResult.status==='fulfilled')disposeGroup(modelResult.value.scene);
+      if(textureResult.status==='fulfilled')textureResult.value.dispose();
+      if(!cancelled)fallback.visible=true;
+      return;
+    }
+    const model=modelResult.value.scene,texture=textureResult.value;
+    // The supplied façades face -Z; the shared village path approaches +Z.
+    model.rotation.y=Math.PI;
+    model.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=true;}});
+    mount.add(model,houseNameplate(texture,{width:3.3,x:0,y:power?3.65:3.62,z:power?2.55:3.08}));
+  }));
+  return {ready,cancel(){cancelled=true;}};
+}
+
+function loadHouseResident(world) {
+  if(!world.resident)return noAssetLoad();
+  const {mount,fallback,modelUrl,name}=world.resident;
+  let cancelled=false;
+  const ready=new GLTFLoader().loadAsync(modelUrl).then(({scene:model})=>{
     if(cancelled){disposeGroup(model);return;}
-    // The supplied turtle is Y-up and faces +Z. Match the old resident's
-    // footprint while keeping the interaction point and sign in place.
+    // Both supplied residents use Y as up and face the visitor along +Z.
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new THREE.Vector3());
     if(!Number.isFinite(size.y)||size.y<=0){disposeGroup(model);fallback.visible=true;return;}
     const scale=Math.min(1.8/size.y,1.4/Math.max(size.x,size.z));
     model.scale.setScalar(scale);
     model.position.set(-3-(bounds.min.x+bounds.max.x)*scale/2,-bounds.min.y*scale,1.8-(bounds.min.z+bounds.max.z)*scale/2);
-    model.name='파도 · 거북이 주민';
+    model.name=`${name} · 집 주민`;
     model.userData.dynamic=true;
     model.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=true;}});
     mount.add(model);
@@ -308,8 +393,8 @@ const distanceTo=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function createVillageGame(container, options = {}) {
   let destroyed=false,paused=false,companyId=VALID_COMPANIES.has(options.companyId)?options.companyId:'hub';
   let facilityId=null,world=null,frameId=0,transitionTimer=0,transitionVersion=0,inTransition=false,lastTime=0;
-  let oceanLoad=noAssetLoad(),residentLoad=noAssetLoad(),oceanDivisionShipLoad=noAssetLoad(),systemsResidentLoad=noAssetLoad(),mascotReady=false,sceneAssetsReady=false;
-  let doorCooldown=0,walkTime=0,nearbyKey='',path=[],pointerStart=null,ready=false;
+  let oceanLoad=noAssetLoad(),systemsHouseLoad=noAssetLoad(),aeroHouseLoad=noAssetLoad(),futureHousesLoad=noAssetLoad(),residentLoad=noAssetLoad(),oceanDivisionShipLoad=noAssetLoad(),systemsResidentLoad=noAssetLoad(),mascotReady=false,sceneAssetsReady=false;
+  let doorCooldown=0,walkTime=0,nearbyKey='',path=[],pointerStart=null,ready=false,comingSoonVisit=null;
   let direction={x:0,z:0},held=new Set();
   let renderer=null;
   const call=(name,...args)=>{if(!destroyed && typeof options[name]==='function')options[name](...args);};
@@ -387,13 +472,16 @@ export function createVillageGame(container, options = {}) {
     const nextWorld=nextFacility?buildInterior(THREE,nextFacility):buildExterior(THREE,nextCompany);
     const spawn=nearestWalkablePoint(spawnOverride||nextWorld.spawn,nextWorld.colliders,nextWorld.bounds);
     if(!spawn){disposeGroup(nextWorld.group);throw new Error('No safe character spawn');}
-    oceanLoad.cancel();residentLoad.cancel();oceanDivisionShipLoad.cancel();systemsResidentLoad.cancel();
+    oceanLoad.cancel();systemsHouseLoad.cancel();aeroHouseLoad.cancel();futureHousesLoad.cancel();residentLoad.cancel();oceanDivisionShipLoad.cancel();systemsResidentLoad.cancel();
     if(world){scene.remove(world.group);disposeGroup(world.group);}
     world=nextWorld;companyId=nextCompany;facilityId=nextFacility;
     sceneAssetsReady=false;
     scene.add(world.group);player.x=spawn.x;player.z=spawn.z;
     oceanLoad=loadOceanExterior(world);
-    residentLoad=loadOceanResident(world);
+    systemsHouseLoad=loadSystemsExterior(world);
+    aeroHouseLoad=loadAeroExterior(world);
+    futureHousesLoad=loadFutureExteriors(world);
+    residentLoad=loadHouseResident(world);
     oceanDivisionShipLoad=loadOceanDivisionShip(world);
     systemsResidentLoad=loadSystemsResident(world);
     avatar.group.position.set(player.x,0,player.z);
@@ -402,9 +490,9 @@ export function createVillageGame(container, options = {}) {
     scene.fog.color.copy(scene.background);
     scene.fog.near=nextFacility?45:48;
     sun.intensity=nextFacility?2.1:3.1;hemisphere.intensity=nextFacility?2.9:2.5;
-    doorCooldown=performance.now()+1300;nearbyKey='';clearInput();
+    doorCooldown=performance.now()+1300;nearbyKey='';comingSoonVisit=null;clearInput();
     call('onNearby',null);cameraPosition(true);notifyLocation();
-    return Promise.all([oceanLoad.ready,residentLoad.ready,oceanDivisionShipLoad.ready,systemsResidentLoad.ready]).then(()=>{
+    return Promise.all([oceanLoad.ready,systemsHouseLoad.ready,aeroHouseLoad.ready,futureHousesLoad.ready,residentLoad.ready,oceanDivisionShipLoad.ready,systemsResidentLoad.ready]).then(()=>{
       if(!destroyed&&world===nextWorld)sceneAssetsReady=true;
     });
   }
@@ -429,6 +517,7 @@ export function createVillageGame(container, options = {}) {
   }
 
   function enterHouse(id) {
+    if(id==='radar'||id==='engine')return;
     if(!FACILITY_NAMES[id]||facilityId)return;
     const door=world.triggers.find(trigger=>trigger.type==='enter'&&trigger.id===id);
     if(door)arrivalPositions.set(id,{x:door.x,z:door.z+1.8});
@@ -445,6 +534,10 @@ export function createVillageGame(container, options = {}) {
 
   function triggerAction(trigger) {
     if(trigger.type==='enter')enterHouse(trigger.id);
+    else if(trigger.type==='coming-soon'){
+      clearInput();
+      if(comingSoonVisit!==trigger.id){comingSoonVisit=trigger.id;call('onComingSoon','입주 예정입니다');}
+    }
     else if(trigger.type==='exit')leaveHouse();
     else if(trigger.type==='company') {
       const id=trigger.id.replace(/^portal-/,'');
@@ -480,7 +573,7 @@ export function createVillageGame(container, options = {}) {
     if(nearby.type==='inspect'&&facilityId) {clearInput();call('onInteract',nearby.id);}
     else if(nearby.type==='resident'&&facilityId) {clearInput();call('onResident',facilityId);}
     else if(nearby.type==='exit')leaveHouse();
-    else if(nearby.type==='enter'||nearby.type==='company') {
+    else if(nearby.type==='enter'||nearby.type==='coming-soon'||nearby.type==='company') {
       // A keyboard shortcut still walks the character into the real doorway.
       routeTo(nearby);
     }
@@ -514,7 +607,7 @@ export function createVillageGame(container, options = {}) {
       return;
     }
     if(facilityId){leaveHouse(()=>moveToFacility(id));return;}
-    const door=world.triggers.find(trigger=>trigger.type==='enter'&&trigger.id===home.id);
+    const door=world.triggers.find(trigger=>['enter','coming-soon'].includes(trigger.type)&&trigger.id===home.id);
     if(door)routeTo(door);
   }
 
@@ -592,6 +685,7 @@ export function createVillageGame(container, options = {}) {
         const trigger=world.triggers.find(item=>distanceTo(player,item)<(item.radius||1));
         if(trigger){doorCooldown=time+1400;triggerAction(trigger);}
       }
+      if(comingSoonVisit&&!world.triggers.some(item=>item.type==='coming-soon'&&item.id===comingSoonVisit&&distanceTo(player,item)<(item.radius||1)+.5))comingSoonVisit=null;
       const nearby=currentNearby(),key=nearby?`${nearby.type}:${nearby.id}`:'';
       if(key!==nearbyKey){nearbyKey=key;call('onNearby',nearby?{id:nearby.id,label:nearby.label,type:nearby.type}:null);}
     }
@@ -634,7 +728,7 @@ export function createVillageGame(container, options = {}) {
   return {
     destroy() {
       if(destroyed)return;destroyed=true;transitionVersion++;cancelAnimationFrame(frameId);clearTimeout(transitionTimer);resizeObserver.disconnect();
-      cancelMascotLoad();oceanLoad.cancel();residentLoad.cancel();oceanDivisionShipLoad.cancel();systemsResidentLoad.cancel();
+      cancelMascotLoad();oceanLoad.cancel();systemsHouseLoad.cancel();aeroHouseLoad.cancel();futureHousesLoad.cancel();residentLoad.cancel();oceanDivisionShipLoad.cancel();systemsResidentLoad.cancel();
       window.removeEventListener('keydown',keyDown);window.removeEventListener('keyup',keyUp);window.removeEventListener('blur',onBlur);
       canvas.removeEventListener('pointerdown',pointerDown);canvas.removeEventListener('pointerup',pointerUp);canvas.removeEventListener('webglcontextlost',contextLost);
       disposeGroup(world?.group);disposeGroup(avatar.group);disposeGroup(destinationMarker);
