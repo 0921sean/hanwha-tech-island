@@ -113,6 +113,15 @@
 .aero-video{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#182c27}
 .aero-fields{padding:16px 24px 0}.aero-suggestions{display:grid;gap:5px;flex-shrink:0;max-height:190px;overflow:auto}.aero-suggestions button{text-align:left;padding:8px 12px;border:1px solid #d5ddc9;border-radius:10px;background:#fffdf3;color:#344d3c;cursor:pointer;font:inherit;font-size:13px}.aero-suggestions button:hover{background:#e8efd9}.resident-chat{max-height:calc(100dvh - 90px)}
 
+.resident-chat{height:min(82dvh,740px);max-height:calc(100dvh - 90px)}
+.resident-chat-log{min-height:0}
+.resident-suggestions{display:grid;gap:7px;flex-shrink:0}
+.resident-suggestions-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;padding:7px 10px;border:1px solid #decba6;border-radius:10px;background:#fffdf0;color:#5b4934;font-size:12px;font-weight:750;cursor:pointer}
+.resident-suggestions-toggle:hover{background:#f3e8c7}
+.resident-suggestions .aero-suggestions{max-height:min(23dvh,190px)}
+.resident-suggestions .aero-suggestions[hidden]{display:none}
+@media(max-width:680px){.resident-chat{height:calc(100dvh - 74px);max-height:calc(100dvh - 74px);bottom:16px}}
+
 .music-widget .music-panel{position:static;width:230px;max-width:calc(100vw - 24px)}
 .music-widget .music-heading{margin-bottom:7px}
 .music-widget .music-play{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:9px;background:#e8efd9;color:#426d4e;font-size:11px;font-weight:700}

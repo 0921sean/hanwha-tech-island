@@ -293,6 +293,7 @@ function ResidentDialogue({ house, onClose, onVisit }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [topic, setTopic] = useState(house.topics[0]);
   const [audience,setAudience] = useState('');
+  const [suggestionsOpen,setSuggestionsOpen] = useState(true);
   const isAero=house.id === 'combat';
   const isOcean=house.id === 'lng';
   const isSystems=house.id === 'launch';
@@ -302,6 +303,7 @@ function ResidentDialogue({ house, onClose, onVisit }) {
   useEffect(() => { log.current?.scrollTo(0, log.current.scrollHeight); }, [turns, busy]);
   async function submit(e) {
     e.preventDefault(); const q = question.trim(); if (!q || controller.current) return;
+    setSuggestionsOpen(false);
     const request = new AbortController(); controller.current = request;
     setBusy(true); setError(''); const timer = setTimeout(() => request.abort(), API_REQUEST_TIMEOUT_MS);
     try {
@@ -320,7 +322,7 @@ function ResidentDialogue({ house, onClose, onVisit }) {
   return <section className="resident-dialogue resident-chat" role="dialog" aria-modal="true" aria-label={`${house.resident}와 대화`} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); }}>
     <span className="resident-name">{house.resident}</span><button className="resident-close" onClick={onClose} aria-label="대화 닫기"><X size={17}/></button>
     <p>안녕! 나는 {house.resident}야. {house.residentIntro}<br/>{house.subtitle}에 대해 물어봐!</p>
-    <div className="resident-dialogue-topics">{audienceQuestions ? RESIDENT_AUDIENCES.map(mode => <button key={mode} disabled={busy} aria-pressed={audience === mode} onClick={() => {setAudience(mode);setQuestion('');setTurns([]);setError('');input.current?.focus();}}>{mode}</button>) : house.topics.map(id => <button key={id} disabled={busy} aria-pressed={topic === id} onClick={() => {setTopic(id);setQuestion(`${getTechFacility(id)?.name}을 쉽게 설명해줘`);}}>{getTechFacility(id)?.name}</button>)}</div>
+    <div className="resident-dialogue-topics">{audienceQuestions ? RESIDENT_AUDIENCES.map(mode => <button key={mode} disabled={busy} aria-pressed={audience === mode} onClick={() => {setAudience(mode);setSuggestionsOpen(true);setQuestion('');setTurns([]);setError('');input.current?.focus();}}>{mode}</button>) : house.topics.map(id => <button key={id} disabled={busy} aria-pressed={topic === id} onClick={() => {setTopic(id);setQuestion(`${getTechFacility(id)?.name}을 쉽게 설명해줘`);}}>{getTechFacility(id)?.name}</button>)}</div>
     <div className="resident-chat-log" ref={log} role="log" aria-live="polite">
       {audienceQuestions && !audience && <p>고객 · 일반대중 · 취준생 중 사용자 모드를 선택해 주세요.</p>}
       {!turns.length && <p>답변마다 AI / 도감 모드를 표시해요. 대화는 창을 닫으면 지워져요.</p>}
@@ -329,7 +331,7 @@ function ResidentDialogue({ house, onClose, onVisit }) {
     </div>
     {error && <p role="alert">{error} 질문을 다시 보내주세요.</p>}
     <form className="question-form" onSubmit={submit}><label className="sr-only" htmlFor="resident-question">주민에게 질문</label><input id="resident-question" ref={input} value={question} disabled={busy || (audienceQuestions && !audience)} onChange={e => setQuestion(e.target.value)} maxLength={1000} placeholder={audienceQuestions ? (audience ? `${audience} 모드로 ${house.resident}에게 질문하세요` : '먼저 사용자 모드를 선택해 주세요') : '궁금한 점을 물어봐!'} autoComplete="off"/><button disabled={busy || !question.trim()} aria-label="질문 보내기">{busy ? <Loader2 className="spin" size={20}/> : <Send size={19}/>}</button></form>
-    {audienceQuestions && audience && <div className="aero-suggestions" aria-label={`${audience} 추천 질문`}><strong>{audience} 추천 질문</strong>{audienceQuestions[audience].map((q,i)=><button key={q} disabled={busy} onClick={()=>{setQuestion(q);input.current?.focus();}}>{i+1}. {q}</button>)}</div>}
+    {audienceQuestions && audience && <div className="resident-suggestions"><button type="button" className="resident-suggestions-toggle" aria-expanded={suggestionsOpen} aria-controls="resident-suggestion-list" onClick={()=>setSuggestionsOpen(open=>!open)}><span>{audience} 추천 질문</span><span>{suggestionsOpen?'접기 ▴':'보기 ▾'}</span></button><div id="resident-suggestion-list" className="aero-suggestions" aria-label={`${audience} 추천 질문`} hidden={!suggestionsOpen}>{audienceQuestions[audience].map((q,i)=><button key={q} type="button" disabled={busy} onClick={()=>{setQuestion(q);setSuggestionsOpen(false);input.current?.focus();}}>{i+1}. {q}</button>)}</div></div>}
     {!audienceQuestions && <button className="resident-exhibit" onClick={() => onVisit(topic)}>선택한 전시물 보기</button>}
   </section>;
 }
