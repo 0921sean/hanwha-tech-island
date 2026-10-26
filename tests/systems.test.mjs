@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { SYSTEMS_QUESTIONS, SYSTEMS_EXHIBITS, systemsAnswer } from '../src/data/systems.js';
 
-test('all 20 systems questions have mode-specific answers and supplied official links',()=>{
-  assert.deepEqual(Object.keys(SYSTEMS_QUESTIONS),['고객','일반대중','취준생','신규입사자']);
+test('all 15 systems questions have mode-specific answers and supplied official links',()=>{
+  assert.deepEqual(Object.keys(SYSTEMS_QUESTIONS),['고객','일반대중','취준생']);
   for(const [mode,questions] of Object.entries(SYSTEMS_QUESTIONS)){
     assert.equal(questions.length,5);
     for(const q of questions){
@@ -15,9 +15,9 @@ test('all 20 systems questions have mode-specific answers and supplied official 
   }
   assert.equal(systemsAnswer('자료에 없는 질문','고객').insufficient,true);
 });
-test('K2 and PKMR retain explanation, activity and source content',()=>{
-  assert.deepEqual(SYSTEMS_EXHIBITS.map(f=>f.id),['systems-k2','systems-pkmr']);
-  assert.match(SYSTEMS_EXHIBITS[0].principle,/현대로템/);
+test('AESA and PKMR retain explanation, activity and source content',()=>{
+  assert.deepEqual(SYSTEMS_EXHIBITS.map(f=>f.id),['systems-aesa','systems-pkmr']);
+  assert.match(SYSTEMS_EXHIBITS[0].principle,/전자적으로/);
   for(const f of SYSTEMS_EXHIBITS){assert.equal(f.challenge.steps.length,3);assert.ok(f.sources.length>=2);assert.ok(f.principle&&f.analogy&&f.value);}
 });
 test('supplied Hantori is a complete GLB 2 asset',()=>{

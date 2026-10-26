@@ -8,20 +8,19 @@ export function systemsAnswer(question, audience) {
     const text = question.toLowerCase();
     summary = /레이다|레이더|radar|전파/.test(text) ? data.responses['일반대중'][1]
       : /함정|pkmr|전투체계/.test(text) ? data.responses['일반대중'][2]
-      : /k2|전차|탱크/.test(text) ? 'K2 흑표 전차에서 한화시스템은 사격통제시스템과 조준 장비를 담당해요. 전차 완성체의 제작사는 현대로템이에요. 왼쪽 전시물에서 센서와 정보 처리의 역할을 체험해 보세요.'
       : '공개 자료에서 이 질문의 구체적인 답을 확인하기 어려워요. 관심 사업, 전공 또는 부서를 덧붙이거나 아래 추천 질문을 선택해 주세요.';
   }
   return {summary, mode:'demo', insufficient:index < 0, sources:systemsSources};
 }
 export const SYSTEMS_EXHIBITS = [
-  {id:'systems-k2', companyId:'systems', name:'K2 흑표 · 사격통제시스템', icon:'ground',
-    summary:'전차의 센서와 컴퓨터가 정보를 연결해 운용자의 판단을 도와요.',
-    analogy:'여러 관찰자의 메모를 한 장의 상황판으로 정리하는 도우미와 비슷해요.',
-    analogyLimit:'실제 장비는 전용 센서와 컴퓨터를 사용해요. 모형은 외형을 단순화한 학습용이에요.',
-    principle:'조준 장비가 관측한 정보를 사격통제컴퓨터가 처리하고 운용자에게 제공해요. K2 전차는 현대로템의 제품이며, 한화시스템의 역할은 사격통제시스템과 조준 장비를 중심으로 살펴봐요.',
-    problem:'여러 관측 정보를 따로 보면 상황을 함께 파악하기 어려워요.', value:'센서와 정보 처리를 연결해 운용자의 상황 이해를 지원해요.',
-    sources:data.sources.filter(s=>s.id==='systems-land'||s.id==='systems-k2-source'),
-    challenge:{type:'sequence',title:'전차 안의 정보 연결',instruction:'정보가 운용자에게 전달되는 순서로 카드를 골라 주세요.',steps:['센서로 주변을 관측해요','컴퓨터가 관측 정보를 처리해요','운용자가 정보를 확인해요'],explanation:'관측 → 처리 → 확인의 흐름을 이해했어요. 실제 사격 절차를 재현하는 체험은 아니에요.'}},
+  {id:'systems-aesa', companyId:'systems', name:'AESA 레이다', icon:'radar',
+    summary:'AESA 레이다는 전파를 보내고 돌아온 신호를 처리해 대상을 탐지하고 추적해요.',
+    analogy:'손전등 빛을 여러 방향으로 돌려 주변을 살피는 장면을 떠올려 보세요.',
+    analogyLimit:'실제 레이다는 빛이 아니라 전파를 사용하고, 전자식으로 빔 방향을 바꿔요.',
+    principle:'능동형 전자식 빔 주사 배열은 전파 빔의 방향을 전자적으로 조절해요. 반사 신호를 처리하면 대상의 거리와 방향, 움직임을 파악하는 데 도움이 돼요.',
+    problem:'넓은 공간에서 여러 대상의 위치와 움직임을 파악해야 해요.',value:'탐지·추적 정보를 제공해 운용자가 상황을 이해하도록 도와요.',
+    sources:data.sources.filter(s=>s.id==='systems-isr'||s.id==='systems-aesa'),
+    challenge:{type:'sequence',title:'레이다가 주변을 살펴요',instruction:'전파가 정보를 전하는 순서대로 골라 주세요.',steps:['전파를 보내요','대상에서 돌아온 신호를 받아요','신호를 처리해 위치와 움직임을 살펴요'],explanation:'송신 → 수신 → 처리의 흐름을 이해했어요. 실제 장비의 운용 절차를 재현하는 체험은 아니에요.'}},
   {id:'systems-pkmr', companyId:'systems', name:'PKMR · 함정 전투체계', icon:'naval',
     summary:'함정 전투체계는 여러 장비의 정보를 모아 운용자의 상황 판단을 도와요.',
     analogy:'각 반의 소식을 모아 학교 전체 상황을 보여주는 방송실을 떠올려 보세요.',

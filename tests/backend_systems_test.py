@@ -7,7 +7,7 @@ from backend import main
 
 
 class SystemsHouse(unittest.TestCase):
-    def test_twenty_recommendations_work_without_provider(self):
+    def test_fifteen_recommendations_work_without_provider(self):
         data = json.loads(Path('src/data/systems.json').read_text(encoding='utf-8'))
         with TestClient(main.app) as client, patch.object(main, 'API_KEY', ''), patch.object(main, 'GEMINI_API_KEY', ''):
             for mode, questions in data['questions'].items():

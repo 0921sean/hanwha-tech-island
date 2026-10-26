@@ -63,7 +63,7 @@ class Residents(unittest.TestCase):
         self.assertIn('루미',body['systemInstruction']['parts'][0]['text'])
         self.assertIn('responseJsonSchema',body['generationConfig'])
     def test_moa_audiences_reach_provider(self):
-        for audience in ['고객','일반대중','취준생','신규입사자']:
+        for audience in ['고객','일반대중','취준생']:
             async def generate(data, resident):
                 self.assertEqual(resident,'combat')
                 self.assertEqual(data['audience'],audience)
@@ -76,7 +76,7 @@ class Residents(unittest.TestCase):
                 self.assertEqual(result.json()['mode'],'llm')
                 provider.assert_awaited_once()
     def test_pado_audiences_reach_provider(self):
-        for audience in ['고객','일반대중','취준생','신규입사자']:
+        for audience in ['고객','일반대중','취준생']:
             async def generate(data, resident):
                 self.assertEqual(resident,'lng')
                 self.assertEqual(data['audience'],audience)
@@ -89,6 +89,6 @@ class Residents(unittest.TestCase):
                 self.assertEqual(result.json()['mode'],'llm')
                 provider.assert_awaited_once()
     def test_moa_rejects_old_company_and_invalid_audience(self):
-        for change in [{'companyId':'systems','facilityId':'combat'},{'audience':'관리자'}]:
+        for change in [{'companyId':'systems','facilityId':'combat'},{'audience':'관리자'},{'audience':'신규입사자'}]:
             response=self.client.post('/api/ask',json={**self.request('combat'),**change})
             self.assertEqual(response.status_code,422)

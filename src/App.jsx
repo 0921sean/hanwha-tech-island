@@ -83,6 +83,7 @@ export default function App() {
 }
 function getFacility(id) { return getTechFacility(id); }
 const ICONS = { radar: Radio, satellite: Satellite, combat: Shield, engine: Wind, launch: Rocket, ground: Factory, lng: Ship, naval: Anchor, offshore: Waves, 'portal-systems': Radio, 'portal-aerospace': Rocket, 'portal-ocean': Anchor };
+const RESIDENT_AUDIENCES=['고객','일반대중','취준생'];
 function FacilityIcon({ id, size = 21, ...props }) { const Icon = ICONS[id] || Compass; return <Icon size={size} strokeWidth={1.65} {...props}/>; }
 function Avatar({ color = '#58a45f', small = false }) { return <span className={`dog-avatar ${small ? 'small' : ''}`} style={{ '--shirt': color }} aria-hidden="true"><span className="dog-shirt"/><span className="dog-head"><i className="dog-ear left"/><i className="dog-ear right"/><i className="dog-blaze"/><i className="dog-eye left"/><i className="dog-eye right"/><i className="dog-muzzle"/><i className="dog-nose"/><i className="dog-smile"/><i className="dog-cheek left"/><i className="dog-cheek right"/></span></span>; }
 function MeshAvatarPreview({ color }) {
@@ -123,7 +124,6 @@ function GameApp() {
   const [nearby, setNearby] = useState(null);
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState('');
-  const [notice, setNotice] = useState(true);
   const [guideOpen, setGuideOpen] = useState(false);
   const [immersive, setImmersive] = useState(true);
   const [gameError, setGameError] = useState('');
@@ -189,7 +189,6 @@ function GameApp() {
   }, [modal]);
   function visit(id) {
     setModal(null);
-    setNotice(false);
     gameRef.current?.setPaused(false);
     gameRef.current?.moveToFacility(id);
   }
@@ -201,7 +200,6 @@ function GameApp() {
     else if (nearby.type === 'company') visit(`portal-${nearby.id.replace(/^portal-/, '')}`);
     else if (nearby.type === 'coming-soon') visit(nearby.id);
     else visit(nearby.id);
-    setNotice(false);
   }
   function complete(id) {
     setProgress(p => ({ ...p, completed: [...new Set([...p.completed, id])] }));
@@ -247,7 +245,6 @@ function GameApp() {
           <div className="world-tools"><span className="weather-pill"><Sun size={19}/><span>맑음 · 느긋한 오후</span></span><button className="round-tool" aria-label={immersive ? '기본 화면으로' : '넓게 탐험하기'} onClick={() => setImmersive(!immersive)}>{immersive ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}</button><button className="round-tool" aria-label={guideOpen ? '마을 안내 접기' : '마을 안내 펼치기'} onClick={() => setGuideOpen(!guideOpen)}>{guideOpen ? <PanelRightClose size={18}/> : <PanelRightOpen size={18}/>}</button></div>
         </div>
 
-        {notice && !modal && <div className="welcome-bubble"><span className="welcome-flower">✿</span><div><strong>어서 와요, {progress.name || '탐험가'}님!</strong><p>방향키로 걸어가 집 안을 탐험해 보세요.</p></div><button aria-label="환영 안내 닫기" onClick={() => setNotice(false)}><X size={15}/></button></div>}
 
         {guideOpen && <aside className="village-guide">
           <div className="guide-heading"><span><BookOpen size={14}/>마을 안내서</span><small>VILLAGE GUIDE</small></div>
@@ -261,7 +258,7 @@ function GameApp() {
         </aside>}
 
         <div className="world-bottom">
-          <div className="controls-card"><span className="control-heading"><Move size={15}/>천천히, 걸어보세요</span><div><span><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd><em>이동</em></span><i/><span><kbd>E</kbd><em>살펴보기</em></span><i/><span><kbd>Esc</kbd><em>닫기</em></span></div><small>에어로·시스템·오션의 집 문으로 걸어가 보세요.</small></div>
+          <div className="controls-card"><span className="control-heading"><Move size={15}/>천천히, 걸어보세요</span><div><span><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd><em>이동</em></span><i/><span><kbd>Shift</kbd><em>뛰기</em></span><i/><span><kbd>E</kbd><em>살펴보기</em></span><i/><span><kbd>Esc</kbd><em>닫기</em></span></div><small>에어로·시스템·오션의 집 문으로 걸어가 보세요.</small></div>
           <div className="world-status"><span className="status-tag"><span/>LIVE 3D</span>{location.interior && <button className="exit-room" onClick={() => gameRef.current?.exitInterior()}><DoorOpen size={17}/>집 밖으로</button>}<button className="exploration-note" onClick={() => setModal('notebook')}><BookOpen size={16}/>{progress.visited.length}개의 발견<ChevronRight size={14}/></button></div>
         </div>
 
@@ -323,9 +320,9 @@ function ResidentDialogue({ house, onClose, onVisit }) {
   return <section className="resident-dialogue resident-chat" role="dialog" aria-modal="true" aria-label={`${house.resident}와 대화`} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); }}>
     <span className="resident-name">{house.resident}</span><button className="resident-close" onClick={onClose} aria-label="대화 닫기"><X size={17}/></button>
     <p>안녕! 나는 {house.resident}야. {house.residentIntro}<br/>{house.subtitle}에 대해 물어봐!</p>
-    <div className="resident-dialogue-topics">{audienceQuestions ? Object.keys(audienceQuestions).map(mode => <button key={mode} disabled={busy} aria-pressed={audience === mode} onClick={() => {setAudience(mode);setQuestion('');setTurns([]);setError('');input.current?.focus();}}>{mode}</button>) : house.topics.map(id => <button key={id} disabled={busy} aria-pressed={topic === id} onClick={() => {setTopic(id);setQuestion(`${getTechFacility(id)?.name}을 쉽게 설명해줘`);}}>{getTechFacility(id)?.name}</button>)}</div>
+    <div className="resident-dialogue-topics">{audienceQuestions ? RESIDENT_AUDIENCES.map(mode => <button key={mode} disabled={busy} aria-pressed={audience === mode} onClick={() => {setAudience(mode);setQuestion('');setTurns([]);setError('');input.current?.focus();}}>{mode}</button>) : house.topics.map(id => <button key={id} disabled={busy} aria-pressed={topic === id} onClick={() => {setTopic(id);setQuestion(`${getTechFacility(id)?.name}을 쉽게 설명해줘`);}}>{getTechFacility(id)?.name}</button>)}</div>
     <div className="resident-chat-log" ref={log} role="log" aria-live="polite">
-      {audienceQuestions && !audience && <p>고객 · 일반대중 · 취준생 · 신규입사자 중 사용자 모드를 선택해 주세요.</p>}
+      {audienceQuestions && !audience && <p>고객 · 일반대중 · 취준생 중 사용자 모드를 선택해 주세요.</p>}
       {!turns.length && <p>답변마다 AI / 도감 모드를 표시해요. 대화는 창을 닫으면 지워져요.</p>}
       {turns.map((t,i) => <article key={i}><p className="resident-user"><strong>나</strong> · {t.question}</p><small>{house.resident} · {t.answer.mode === 'llm' ? 'AI 답변' : '도감 모드'}{t.answer.insufficient ? ' · 자료 부족' : ''}</small><p>{t.answer.summary}</p>{t.answer.analogy && <p>{t.answer.analogy}<small className="analogy-limit">{t.answer.analogyLimit}</small></p>}{t.answer.principle && <p>{t.answer.principle}</p>}{t.answer.sources?.length > 0 && <Sources sources={t.answer.sources} compact/>}</article>)}
       {busy && <p role="status">{house.resident}가 자료를 살펴보고 있어요…</p>}
@@ -360,7 +357,11 @@ function QuestionPanel({ facility }) {
   const [question,setQuestion] = useState(''), [answer,setAnswer] = useState(null), [busy,setBusy] = useState(false), [error,setError] = useState(''), [lastQuestion,setLastQuestion] = useState('');
   const controller = useRef(null); useEffect(() => () => controller.current?.abort(), []);
   async function submit(text) { const q = (text || question).trim(); if (!q || busy) return; setQuestion(q); setBusy(true); setError(''); controller.current = new AbortController(); const timeout = setTimeout(() => controller.current?.abort(), API_REQUEST_TIMEOUT_MS); try { const a = facility.id.startsWith('systems-') ? systemsAnswer(q,'일반대중') : facility.id.startsWith('aero-') ? (import.meta.env.VITE_API_BASE_URL ? await askQuestion(q, 'aerospace', AERO_FIELDS.find(f=>`aero-${f.key}`===facility.id).topic, 'intro', controller.current.signal, {residentId:'combat',audience:'일반대중'}) : aeroAnswer(q,'일반대중')) : await askQuestion(q, facility.companyId, facility.id, 'intro', controller.current.signal); setAnswer(a); setLastQuestion(q); } catch (e) { if (e.name === 'AbortError') setError('응답 시간이 길어지고 있어요. 다시 시도해 주세요.'); else setError(e.message); } finally { clearTimeout(timeout); setBusy(false); } }
-  const suggestions=[`${facility.name}을 쉽게 설명해줘`,...(['systems-k2','systems-pkmr'].includes(facility.id)?[]:['위성과 발사체는 어떻게 달라?']),'함정과 전투체계는 어떤 관계야?'];
+  const suggestions=facility.id==='systems-aesa'
+    ?[`${facility.name}을 쉽게 설명해줘`,'AESA 레이다는 어떻게 대상을 찾아?']
+    :facility.id==='systems-pkmr'
+      ?[`${facility.name}을 쉽게 설명해줘`,'함정과 전투체계는 어떤 관계야?']
+      :[`${facility.name}을 쉽게 설명해줘`,'위성과 발사체는 어떻게 달라?','함정과 전투체계는 어떤 관계야?'];
   return <div className="questions"><div className="question-intro"><span className="sparkle-circle"><Sparkles size={25}/></span><h3>궁금한 만큼, 더 가까워지는 기술</h3><p>{import.meta.env.VITE_API_BASE_URL ? '공식 자료에서 근거를 찾아 답변해요.' : '지금은 공식 자료를 정리한 데모 답변을 제공해요.'}<br/>기술의 역할이나 세 회사의 차이를 물어보세요.</p></div><div className="suggestions">{suggestions.map(q => <button key={q} disabled={busy} onClick={() => submit(q)}>{q}<ArrowUpRight size={14}/></button>)}</div><form className="question-form" onSubmit={e => { e.preventDefault(); submit(); }}><label className="sr-only" htmlFor="question">기술에 대한 질문</label><input id="question" value={question} onChange={e => setQuestion(e.target.value)} maxLength={1000} placeholder="이 기술이 누구에게 도움이 되나요?" autoComplete="off"/><button type="submit" disabled={busy || !question.trim()} aria-label="질문 보내기">{busy ? <Loader2 className="spin" size={20}/> : <Send size={19}/>}</button></form>{error && <div className="error-card" role="alert"><p>{error}</p><button disabled={busy} onClick={() => submit()}>다시 시도 <RotateCcw size={14}/></button></div>}{busy && <p className="loading-copy" role="status">도감에서 관련 자료를 찾고 있어요…</p>}{answer && <div className="answer-card"><div className="answer-heading"><Sparkles size={17}/><strong>{answer.mode === 'llm' ? 'AI 안내원의 답변' : '도감 안내원의 답변'}</strong><span>{answer.insufficient ? '자료 부족' : '출처 확인'}</span></div><small className="asked-question">{lastQuestion}</small><p className="answer-summary">{answer.summary}</p>{answer.analogy && <p><strong>쉬운 비유</strong><br/>{answer.analogy}<small className="analogy-limit">비유의 한계 · {answer.analogyLimit}</small></p>}{answer.principle && <p><strong>기본 원리</strong><br/>{answer.principle}</p>}{answer.problem && <p><strong>고객의 고민</strong><br/>{answer.problem}</p>}{answer.value && <p><strong>제공 가치</strong><br/>{answer.value}</p>}{answer.comparison?.length > 0 && <ComparisonTable rows={answer.comparison}/>} {answer.scopeNote && <p className="scope-note">{answer.scopeNote}</p>}{answer.sources?.length > 0 && <Sources sources={answer.sources} compact/>}{answer.insufficient && <p className="scope-note">다음 질문: “{facility.name}의 고객 가치는 무엇인가요?”</p>}</div>}</div>;
 }
 function Notebook({ progress, onOpen, onVisit }) {

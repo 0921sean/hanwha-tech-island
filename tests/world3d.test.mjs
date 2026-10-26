@@ -47,6 +47,7 @@ for (const company of ['hub', 'systems', 'aerospace', 'ocean']) {
         assert.deepEqual(world.triggers.filter(trigger=>trigger.type==='coming-soon').map(trigger=>trigger.id).sort(),['engine','radar']);
         assert.ok(world.triggers.filter(trigger=>trigger.type==='coming-soon').every(trigger=>trigger.label==='입주 예정입니다'));
         assert.ok(world.doors.find(door=>door.id==='launch')?.pivot);
+        assert.deepEqual(world.modelDisplays.map(display=>display.url).sort(),['/models/Cheongung_MFR.glb','/models/K9.glb','/models/submarine_3D_mesh.glb'].sort());
       }
       assert.equal(world.group.type, 'Group');
       assert.ok(isPositionWalkable(world.spawn, world.colliders, world.bounds));
@@ -81,7 +82,7 @@ test('five homes retain residents and reachable exhibits after the systems house
     const world=buildInterior(THREE,home.id);
     try{
       assert.ok(world.interactables.some(item=>item.type==='resident'));
-      for(const topic of home.id==='launch'?['systems-video','systems-k2','systems-pkmr']:home.topics){
+      for(const topic of home.id==='launch'?['systems-video','systems-aesa','systems-pkmr']:home.topics){
         const exhibitId=home.id==='lng'&&topic==='naval'?'ocean-divisions':topic==='combat'?'aero-video':topic==='lng'?'ocean-video':topic;
         const exhibit=world.interactables.find(item=>item.id===exhibitId&&item.type!=='resident');
         assert.ok(exhibit,`${topic} must have a physical exhibit`);
@@ -129,7 +130,8 @@ test('systems house replaces the space room with a hidden fallback resident and 
  try{
   assert.equal(world.label,'시스템의 집');
   assert.equal(world.systemsResident.fallback.visible,false);
-  for(const id of ['systems-video','systems-k2','systems-pkmr']){
+  assert.deepEqual(world.modelDisplays.map(display=>display.url),['/models/AESA_Radar.glb','/models/PKMR_Detailed.glb']);
+  for(const id of ['systems-video','systems-aesa','systems-pkmr']){
    const exhibit=world.interactables.find(item=>item.id===id);
    assert.ok(exhibit);
    assertRoute(world,{x:exhibit.x,z:exhibit.z+Math.min(1.9,exhibit.radius*.8)});
@@ -144,6 +146,8 @@ test('ocean house keeps a reachable video and two learning exhibits',()=>{
   assert.equal(world.resident.fallback.visible,false,'outdated resident stays hidden until the GLB settles');
   assert.equal(world.resident.modelUrl,'/models/ocean_c.glb');
   assert.equal(world.oceanDivisionShip.fallback.visible,false,'old ship stays hidden while the supplied GLB loads');
+  assert.equal(world.modelDisplays[0]?.url,'/models/offshore_drillship.glb');
+  assert.equal(world.modelDisplays[0].fallback.visible,false);
   for(const id of ['ocean-video','ocean-divisions','offshore']){
    const exhibit=world.interactables.find(i=>i.id===id);
    assert.ok(exhibit);

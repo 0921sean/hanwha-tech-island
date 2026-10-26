@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { HOUSES } from '../src/data/houses.js';
 import { OCEAN_QUESTIONS, oceanAnswer, oceanTopic } from '../src/data/ocean.js';
 
-test('ocean house is named and all four audiences have five exact questions', () => {
+test('ocean house is named and all three audiences have five exact questions', () => {
   assert.equal(HOUSES.find(h => h.id === 'lng').name, '오션의 집');
-  assert.deepEqual(Object.keys(OCEAN_QUESTIONS), ['고객', '일반대중', '취준생', '신규입사자']);
+  assert.deepEqual(Object.keys(OCEAN_QUESTIONS), ['고객', '일반대중', '취준생']);
   for (const [audience, questions] of Object.entries(OCEAN_QUESTIONS)) {
     assert.equal(questions.length, 5);
     for (const question of questions) {

@@ -7,7 +7,7 @@ import { CHARACTER_RADIUS, findPath, moveWithCollisions, nearestWalkablePoint } 
 import { houseForTopic } from '../data/houses.js';
 
 const COMPANY_NAMES = {hub:'모여봐요 한화의 숲', systems:'한화시스템 마을', aerospace:'한화에어로스페이스 마을', ocean:'한화오션 마을'};
-const FACILITY_NAMES = {radar:'레이다 연구소',satellite:'위성 관측소',combat:'에어로의 집',engine:'항공엔진 공방',launch:'시스템의 집',ground:'지상장비 정비소',lng:'오션의 집',naval:'특수선 설계실',offshore:'해양설비 제작소'};
+const FACILITY_NAMES = {radar:'레이다 연구소',satellite:'위성 관측소',combat:'에어로의 집',engine:'항공엔진 공방',launch:'시스템의 집',ground:'지상장비 정비소',lng:'오션의 집',naval:'특수선 설계실',offshore:'해양 플랜트'};
 const VALID_COMPANIES = new Set(Object.keys(COMPANY_NAMES));
 
 export function disposeGroup(group) {
@@ -155,6 +155,42 @@ function loadFutureExteriors(world) {
   return {ready,cancel(){cancelled=true;}};
 }
 
+function loadModelDisplays(world) {
+  if(!world.modelDisplays?.length)return noAssetLoad();
+  let cancelled=false;
+  const ready=Promise.all(world.modelDisplays.map(async ({url,mount,fallback,maxSize,baseY=0,rotationY=0,vertexColorTint})=>{
+    try{
+      const {scene:model}=await new GLTFLoader().loadAsync(url);
+      if(cancelled){disposeGroup(model);return;}
+      model.rotation.y=rotationY;
+      const bounds=new THREE.Box3().setFromObject(model);
+      const size=bounds.getSize(new THREE.Vector3());
+      if(![size.x,size.y,size.z].every(value=>Number.isFinite(value)&&value>0)){
+        disposeGroup(model);fallback.visible=true;return;
+      }
+      const scale=Math.min(maxSize[0]/size.x,maxSize[1]/size.y,maxSize[2]/size.z);
+      model.scale.setScalar(scale);
+      model.position.set(-(bounds.min.x+bounds.max.x)*scale/2,baseY-bounds.min.y*scale,-(bounds.min.z+bounds.max.z)*scale/2);
+      model.userData.dynamic=true;
+      const tint=vertexColorTint?new THREE.Color(vertexColorTint):null;
+      model.traverse(node=>{
+        if(!node.isMesh)return;
+        node.castShadow=true;node.receiveShadow=true;
+        const colors=tint&&node.geometry.getAttribute('color');
+        if(colors){
+          for(let i=0;i<colors.count;i++)colors.setXYZ(i,
+            THREE.MathUtils.lerp(colors.getX(i),tint.r,.78),
+            THREE.MathUtils.lerp(colors.getY(i),tint.g,.78),
+            THREE.MathUtils.lerp(colors.getZ(i),tint.b,.78));
+          colors.needsUpdate=true;
+        }
+      });
+      mount.add(model);
+    }catch{if(!cancelled)fallback.visible=true;}
+  }));
+  return {ready,cancel(){cancelled=true;}};
+}
+
 function loadHouseResident(world) {
   if(!world.resident)return noAssetLoad();
   const {mount,fallback,modelUrl,name}=world.resident;
@@ -204,7 +240,7 @@ function loadOceanDivisionShip(world) {
     if(!Number.isFinite(size.x)||!Number.isFinite(size.y)||!Number.isFinite(size.z)||Math.min(size.x,size.y,size.z)<=0){
       disposeGroup(ship);fallback.visible=true;return;
     }
-    const scale=Math.min(1.88/size.x,.95/size.z,.9/size.y);
+    const scale=Math.min(2.45/size.x,1.24/size.z,1.17/size.y);
     ship.scale.setScalar(scale);
     ship.position.set(4.6-(bounds.min.x+bounds.max.x)*scale/2,.72-bounds.min.y*scale,1.1-(bounds.min.z+bounds.max.z)*scale/2);
     ship.name='사업부 둘러보기 · LNG 운반선';
@@ -393,7 +429,7 @@ const distanceTo=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 export function createVillageGame(container, options = {}) {
   let destroyed=false,paused=false,companyId=VALID_COMPANIES.has(options.companyId)?options.companyId:'hub';
   let facilityId=null,world=null,frameId=0,transitionTimer=0,transitionVersion=0,inTransition=false,lastTime=0;
-  let oceanLoad=noAssetLoad(),systemsHouseLoad=noAssetLoad(),aeroHouseLoad=noAssetLoad(),futureHousesLoad=noAssetLoad(),residentLoad=noAssetLoad(),oceanDivisionShipLoad=noAssetLoad(),systemsResidentLoad=noAssetLoad(),mascotReady=false,sceneAssetsReady=false;
+  let oceanLoad=noAssetLoad(),systemsHouseLoad=noAssetLoad(),aeroHouseLoad=noAssetLoad(),futureHousesLoad=noAssetLoad(),displayLoad=noAssetLoad(),residentLoad=noAssetLoad(),oceanDivisionShipLoad=noAssetLoad(),systemsResidentLoad=noAssetLoad(),mascotReady=false,sceneAssetsReady=false;
   let doorCooldown=0,walkTime=0,nearbyKey='',path=[],pointerStart=null,ready=false,comingSoonVisit=null;
   let direction={x:0,z:0},held=new Set();
   let renderer=null;
@@ -472,7 +508,7 @@ export function createVillageGame(container, options = {}) {
     const nextWorld=nextFacility?buildInterior(THREE,nextFacility):buildExterior(THREE,nextCompany);
     const spawn=nearestWalkablePoint(spawnOverride||nextWorld.spawn,nextWorld.colliders,nextWorld.bounds);
     if(!spawn){disposeGroup(nextWorld.group);throw new Error('No safe character spawn');}
-    oceanLoad.cancel();systemsHouseLoad.cancel();aeroHouseLoad.cancel();futureHousesLoad.cancel();residentLoad.cancel();oceanDivisionShipLoad.cancel();systemsResidentLoad.cancel();
+    oceanLoad.cancel();systemsHouseLoad.cancel();aeroHouseLoad.cancel();futureHousesLoad.cancel();displayLoad.cancel();residentLoad.cancel();oceanDivisionShipLoad.cancel();systemsResidentLoad.cancel();
     if(world){scene.remove(world.group);disposeGroup(world.group);}
     world=nextWorld;companyId=nextCompany;facilityId=nextFacility;
     sceneAssetsReady=false;
@@ -481,6 +517,7 @@ export function createVillageGame(container, options = {}) {
     systemsHouseLoad=loadSystemsExterior(world);
     aeroHouseLoad=loadAeroExterior(world);
     futureHousesLoad=loadFutureExteriors(world);
+    displayLoad=loadModelDisplays(world);
     residentLoad=loadHouseResident(world);
     oceanDivisionShipLoad=loadOceanDivisionShip(world);
     systemsResidentLoad=loadSystemsResident(world);
@@ -492,7 +529,7 @@ export function createVillageGame(container, options = {}) {
     sun.intensity=nextFacility?2.1:3.1;hemisphere.intensity=nextFacility?2.9:2.5;
     doorCooldown=performance.now()+1300;nearbyKey='';comingSoonVisit=null;clearInput();
     call('onNearby',null);cameraPosition(true);notifyLocation();
-    return Promise.all([oceanLoad.ready,systemsHouseLoad.ready,aeroHouseLoad.ready,futureHousesLoad.ready,residentLoad.ready,oceanDivisionShipLoad.ready,systemsResidentLoad.ready]).then(()=>{
+    return Promise.all([oceanLoad.ready,systemsHouseLoad.ready,aeroHouseLoad.ready,futureHousesLoad.ready,displayLoad.ready,residentLoad.ready,oceanDivisionShipLoad.ready,systemsResidentLoad.ready]).then(()=>{
       if(!destroyed&&world===nextWorld)sceneAssetsReady=true;
     });
   }
@@ -616,6 +653,8 @@ export function createVillageGame(container, options = {}) {
     const key=event.key.toLowerCase();
     if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(key)) {
       event.preventDefault();held.add(key);path=[];destinationMarker.visible=false;
+    } else if(key==='shift') {
+      held.add('shift');
     } else if(key==='e'&&!event.repeat){event.preventDefault();interact();}
   }
   function keyUp(event){held.delete(event.key.toLowerCase());}
@@ -658,7 +697,7 @@ export function createVillageGame(container, options = {}) {
     // A 120/144 Hz display must not double the draw calls or battery usage.
     if(lastTime&&time-lastTime<1000/60-.25)return;
     const dt=lastTime?Math.min((time-lastTime)/1000,.2):.016;lastTime=time;
-    let moving=false;
+    let moving=false,running=false;
     if(world&&!paused&&!inTransition) {
       let dx=direction.x+(held.has('arrowright')||held.has('d')?1:0)-(held.has('arrowleft')||held.has('a')?1:0);
       let dz=direction.z+(held.has('arrowdown')||held.has('s')?1:0)-(held.has('arrowup')||held.has('w')?1:0);
@@ -670,8 +709,9 @@ export function createVillageGame(container, options = {}) {
       }
       const length=Math.hypot(dx,dz);
       if(length>.01) {
+        running=held.has('shift');
         dx/=length;dz/=length;
-        const stride=Math.min(4.7*dt,path.length?Math.max(.01,distanceTo(player,path[0])):Infinity);
+        const stride=Math.min((running?8:4.7)*dt,path.length?Math.max(.01,distanceTo(player,path[0])):Infinity);
         const next=moveWithCollisions(player,{x:dx*stride,z:dz*stride},world.colliders,world.bounds,CHARACTER_RADIUS);
         moving=distanceTo(player,next)>.001;
         player.x=next.x;player.z=next.z;
@@ -689,7 +729,7 @@ export function createVillageGame(container, options = {}) {
       const nearby=currentNearby(),key=nearby?`${nearby.type}:${nearby.id}`:'';
       if(key!==nearbyKey){nearbyKey=key;call('onNearby',nearby?{id:nearby.id,label:nearby.label,type:nearby.type}:null);}
     }
-    walkTime+=dt*(moving?10:2);
+    walkTime+=dt*(moving?(running?16:10):2);
     const gait=moving?Math.sin(walkTime)*.65:Math.sin(walkTime)*.025;
     if (avatar.isModel) {
       avatar.model.rotation.z=moving?Math.sin(walkTime)*.035:0;
@@ -728,7 +768,7 @@ export function createVillageGame(container, options = {}) {
   return {
     destroy() {
       if(destroyed)return;destroyed=true;transitionVersion++;cancelAnimationFrame(frameId);clearTimeout(transitionTimer);resizeObserver.disconnect();
-      cancelMascotLoad();oceanLoad.cancel();systemsHouseLoad.cancel();aeroHouseLoad.cancel();futureHousesLoad.cancel();residentLoad.cancel();oceanDivisionShipLoad.cancel();systemsResidentLoad.cancel();
+      cancelMascotLoad();oceanLoad.cancel();systemsHouseLoad.cancel();aeroHouseLoad.cancel();futureHousesLoad.cancel();displayLoad.cancel();residentLoad.cancel();oceanDivisionShipLoad.cancel();systemsResidentLoad.cancel();
       window.removeEventListener('keydown',keyDown);window.removeEventListener('keyup',keyUp);window.removeEventListener('blur',onBlur);
       canvas.removeEventListener('pointerdown',pointerDown);canvas.removeEventListener('pointerup',pointerUp);canvas.removeEventListener('webglcontextlost',contextLost);
       disposeGroup(world?.group);disposeGroup(avatar.group);disposeGroup(destinationMarker);

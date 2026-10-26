@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {AERO_QUESTIONS,aeroAnswer,AERO_FIELDS,aeroSources} from '../src/data/aero.js';
-test('four audiences each have five working recommended answers',()=>{
- assert.equal(Object.keys(AERO_QUESTIONS).length,4);
+test('three audiences each have five working recommended answers',()=>{
+ assert.deepEqual(Object.keys(AERO_QUESTIONS),['고객','일반대중','취준생']);
  for(const [audience,questions] of Object.entries(AERO_QUESTIONS)){
   assert.equal(questions.length,5);
   for(const q of questions){const answer=aeroAnswer(q,audience);assert.ok(answer.summary.length>30);assert.equal(answer.insufficient,false);assert.equal(answer.sources.length,4);}

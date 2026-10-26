@@ -133,7 +133,7 @@ export const FACILITIES = [
     challenge: { type: 'sequence', title: '임무에 맞는 배 만들기', instruction: '함정 건조의 큰 흐름에 맞게 카드를 선택해 주세요.', steps: ['필요한 임무를 이해해요', '선체와 탑재 공간을 설계해요', '건조하고 통합 상태를 시험해요'], explanation: '배는 여러 장비가 작동할 수 있는 플랫폼이에요. 전투체계는 그 안에서 정보와 장비를 연결해요. 실제 건조 공정은 이보다 훨씬 복잡해요.' },
   },
   {
-    id: 'offshore', companyId: 'ocean', name: '해양설비 부두', subtitle: '바다에 에너지 작업장을 세워요', icon: 'offshore',
+    id: 'offshore', companyId: 'ocean', name: '해양 플랜트', subtitle: '바다에 에너지 작업장을 세워요', icon: 'offshore',
     summary: '해양 생산설비는 바다에서 에너지를 생산·처리하거나 저장하는 일을 수행하는 시설이에요.',
     analogy: '바다 위에 놓인 커다란 에너지 공장을 떠올려 보세요.',
     analogyLimit: '모든 해양설비가 떠 있는 것은 아니에요. 고정식 플랫폼도 있고, 설비마다 생산·저장·액화 등 맡는 일이 달라요.',

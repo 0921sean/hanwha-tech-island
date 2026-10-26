@@ -128,3 +128,21 @@
 .ocean-division-sources a{display:inline-flex;align-items:center;gap:4px;color:#426d4e;font-size:11px;text-decoration:underline}
 @media(max-width:680px){.ocean-division-grid{grid-template-columns:1fr}.ocean-division-card{padding:15px}.ocean-division-card p{margin:9px 0}}
 
+
+/* Larger type for the exhibition panels. */
+.modal.wide .panel-tabs button{font-size:15px}
+.modal.wide .learning-title small,.modal.wide .depth-toggle,.modal.wide .depth-toggle button{font-size:14px}
+.modal.wide .learning-title h3{font-size:22px}
+.modal.wide .analogy-card strong,.modal.wide .value-grid h4,.modal.wide .principle-card h4{font-size:16px}
+.modal.wide .analogy-card p,.modal.wide .value-grid p,.modal.wide .principle-card p,.modal.wide .answer-card p{font-size:16px}
+.modal.wide .analogy-card small,.modal.wide .source-details summary,.modal.wide .source-details summary>span{font-size:13px}
+.modal.wide .challenge h3,.modal.wide .question-intro h3{font-size:23px}
+.modal.wide .challenge>p,.modal.wide .question-intro p,.modal.wide .section-description,.modal.wide .source-policy p{font-size:15px}
+.modal.wide .challenge-note,.modal.wide .challenge-footer>span,.modal.wide .sequence-path>div small{font-size:13px}
+.modal.wide .choice-list button,.modal.wide .suggestions button,.modal.wide .question-form input{font-size:15px}
+.modal.wide .source-item strong{font-size:16px}
+.modal.wide .source-item p{font-size:14px}
+.modal.wide .source-item small{font-size:12px}
+.modal.wide .answer-card .answer-summary{font-size:18px}
+.modal.wide .answer-card p strong{font-size:15px}
+@media(max-width:680px){.modal.wide .panel-tabs button{font-size:12px}.modal.wide .learning-title h3{font-size:19px}.modal.wide .challenge h3,.modal.wide .question-intro h3{font-size:20px}.modal.wide .choice-list button,.modal.wide .suggestions button,.modal.wide .question-form input{font-size:14px}}

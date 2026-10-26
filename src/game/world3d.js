@@ -16,7 +16,7 @@ const FACILITY = {
   ground: { name: '지상장비 정비소', company: 'aerospace', icon: 'ground', text: '함께 움직이고 돌보는 기술' },
   lng: { name: 'LNG 항구 사무소', company: 'ocean', icon: 'lng', text: '바다 건너 에너지를 전해요' },
   naval: { name: '특수선 설계실', company: 'ocean', icon: 'naval', text: '바다의 임무를 담은 배' },
-  offshore: { name: '해양설비 제작소', company: 'ocean', icon: 'offshore', text: '바다 위의 큰 구조물을 만들어요' },
+  offshore: { name: '해양 플랜트', company: 'ocean', icon: 'offshore', text: '바다 위의 큰 구조물을 만들어요' },
 };
 
 function kit(THREE) {
@@ -328,7 +328,7 @@ function outdoorDecoration(k, group, colliders, animated, companyId) {
 
 export function buildExterior(THREE, companyId = 'hub') {
   const company = COMPANY[companyId] || COMPANY.hub, id = COMPANY[companyId] ? companyId : 'hub';
-  const k = kit(THREE), group = new THREE.Group(), colliders = [], triggers = [], interactables = [], animated = [], doors = [];
+  const k = kit(THREE), group = new THREE.Group(), colliders = [], triggers = [], interactables = [], animated = [], doors = [], modelDisplays=[];
   // Stepped invisible shoreline blockers approximate the rounded island corners
   // while retaining the simple shared rectangle collision/navigation contract.
   for(const sx of[-1,1])for(const sz of[-1,1]){
@@ -421,8 +421,19 @@ export function buildExterior(THREE, companyId = 'hub') {
     const pier=k.group(group,30,0,-6);
     for(const px of[0,1.6,3.2,4.8]) {k.box(pier,px,.02,0,1.55,.18,2.1,'#cda675');for(const pz of[-.85,.85])k.cylinder(pier,px,.1,pz,.1,.1,.45,'#9a7951',8);}
     const ship=iconModel(k,group,'lng',33.4,.07,-10,2.4,animated);
-    ship.rotation.y=.12;
-    for(const zz of[-4,4]) {const wake=k.mesh(group,new THREE.TorusGeometry(1.7,.035,4,32,Math.PI),'#e5f6eb',34,.055,-10+zz);wake.rotation.x=-Math.PI/2;}
+    ship.userData.dynamic=true;ship.visible=false;
+    modelDisplays.push({url:'/models/submarine_3D_mesh.glb',mount:k.group(group,33.4,0,-10.9),fallback:ship,maxSize:[4.8,4.2,11.8],baseY:-.22,vertexColorTint:'#86aab6'});
+    for(const zz of[-4.8,4.8]) {const wake=k.mesh(group,new THREE.TorusGeometry(2,.035,4,32,Math.PI),'#e5f6eb',33.4,.055,-10.9+zz);wake.rotation.x=-Math.PI/2;}
+    const k9Mount=k.group(group,-29,0,9),radarMount=k.group(group,9.8,0,8);
+    k9Mount.userData.facilityId='combat';radarMount.userData.facilityId='launch';
+    k.rounded(group,-29,.09,9,5.8,.2,8.7,'#c9b99b',.12);
+    k.rounded(group,9.8,.09,8,5.7,.2,8.5,'#c9b99b',.12);
+    const k9Fallback=iconModel(k,k9Mount,'ground',0,.22,0,.7,animated);
+    const radarFallback=iconModel(k,radarMount,'radar',0,.22,0,.7,animated);
+    for(const fallback of [k9Fallback,radarFallback]){fallback.userData.dynamic=true;fallback.visible=false;}
+    modelDisplays.push({url:'/models/K9.glb',mount:k9Mount,fallback:k9Fallback,maxSize:[5.3,4.1,8.3],baseY:.2});
+    modelDisplays.push({url:'/models/Cheongung_MFR.glb',mount:radarMount,fallback:radarFallback,maxSize:[5.2,4.2,8],baseY:.2});
+    colliders.push({minX:-31.9,maxX:-26.1,minZ:4.65,maxZ:13.35},{minX:6.95,maxX:12.65,minZ:3.75,maxZ:12.25});
   }
   outdoorDecoration(k,group,colliders,animated,id);
   // Keep the player-facing camera clear of a tall foreground arch.
@@ -438,7 +449,7 @@ export function buildExterior(THREE, companyId = 'hub') {
   // A few simple ripples around the shore.
   for(let i=0;i<6;i++){const ripple=k.mesh(group,new THREE.TorusGeometry(1.4+i*.15,.025,3,26,Math.PI*.85),'#c3e9e6',-26+i*10,-.35,23+(i%2));ripple.rotation.x=-Math.PI/2;ripple.rotation.z=i;}
   batchStatic(THREE,group,animated);
-  return {group,colliders,triggers,interactables,doors,oceanHouse,systemsHouse,aeroHouse,futureHouses,spawn:{x:0,z:20},bounds:{minX:-32,maxX:32,minZ:-27,maxZ:27},animated,label:company.name};
+  return {group,colliders,triggers,interactables,doors,oceanHouse,systemsHouse,aeroHouse,futureHouses,modelDisplays,spawn:{x:0,z:20},bounds:{minX:-32,maxX:32,minZ:-27,maxZ:27},animated,label:company.name};
 }
 
 function guide(k,p,x,z,color,name='안내원') {
@@ -506,7 +517,7 @@ export function buildInterior(THREE, facilityId = 'radar') {
   const home=houseById(facilityId);
   const primary=FACILITY[facilityId]||FACILITY.radar;
   const info=home?{...primary,name:home.name,text:home.signSubtitle||home.subtitle}:primary;
-  const company=COMPANY[home?.companyId||primary.company],k=kit(THREE),group=new THREE.Group(),animated=[],colliders=[];
+  const company=COMPANY[home?.companyId||primary.company],k=kit(THREE),group=new THREE.Group(),animated=[],colliders=[],modelDisplays=[];
   // Cutaway room: no front wall, so the camera can always see the player.
   k.rounded(group,0,-.17,.5,14.8,.32,11.8,'#ba9874',.12);
   k.box(group,0,-.015,.5,14,.04,11,'#dfc69e');
@@ -547,13 +558,15 @@ export function buildInterior(THREE, facilityId = 'radar') {
     k.board(group,facilityId==='combat'?'한화에어로스페이스':'계열사 소개 영상','E  소개 영상 보기',0,3.05,-1.7,3.2);
   } else iconModel(k,group,info.icon,0,1.02,-1.7,.85,animated);
   colliders.push({minX:-1.65,maxX:1.65,minZ:-3.35,maxZ:-.05});
-  // The workstation, bookcase and small thematic models make each house a real room.
-  k.rounded(group,-4.9,.85,-1.4,2.4,.18,1.35,'#bd986c',.06);
-  for(const dx of[-.95,.95])for(const dz of[-.45,.45])k.box(group,-4.9+dx,.4,-1.4+dz,.12,.8,.12,'#a88965');
-  k.rounded(group,-4.9,1.35,-1.6,1.1,.85,.12,'#567c76',.06);k.box(group,-4.9,1.35,-1.52,.92,.67,.025,'#b8d9c5');
-  k.rounded(group,-4.9,1,-.95,.85,.06,.35,'#eee1c8',.03);
-  k.cylinder(group,-5.65,1.1,-1.2,.12,.13,.25,'#e7c28b',12);
-  colliders.push({minX:-6.2,maxX:-3.6,minZ:-2.2,maxZ:-.55});
+  // The aerospace and ocean exhibits use this space for their supplied models.
+  if(facilityId!=='combat'&&facilityId!=='lng'){
+    k.rounded(group,-4.9,.85,-1.4,2.4,.18,1.35,'#bd986c',.06);
+    for(const dx of[-.95,.95])for(const dz of[-.45,.45])k.box(group,-4.9+dx,.4,-1.4+dz,.12,.8,.12,'#a88965');
+    k.rounded(group,-4.9,1.35,-1.6,1.1,.85,.12,'#567c76',.06);k.box(group,-4.9,1.35,-1.52,.92,.67,.025,'#b8d9c5');
+    k.rounded(group,-4.9,1,-.95,.85,.06,.35,'#eee1c8',.03);
+    k.cylinder(group,-5.65,1.1,-1.2,.12,.13,.25,'#e7c28b',12);
+    colliders.push({minX:-6.2,maxX:-3.6,minZ:-2.2,maxZ:-.55});
+  }
   k.rounded(group,5.1,1.1,-2.9,2.45,2.2,.7,'#c6a16f',.07);
   for(const y of[.4,1.1,1.8]) {
     k.box(group,5.1,y,-2.48,2.2,.1,.55,'#e2c393');
@@ -561,24 +574,39 @@ export function buildInterior(THREE, facilityId = 'radar') {
   }
   colliders.push({minX:3.85,maxX:6.35,minZ:-3.35,maxZ:-2.4});
   // A second and third exhibit let all nine subjects live in five homes.
-  k.cylinder(group,4.6,.37,1.1,1,1,.7,'#e6cfaa',18);
+  k.cylinder(group,4.6,.37,1.1,facilityId==='lng'?1.24:1,facilityId==='lng'?1.24:1,.7,'#e6cfaa',18);
   const second=facilityId==='combat'?'engine':home?.topics[1];
   const secondModel=iconModel(k,group,second||info.icon,4.6,.75,1.1,.48,animated);
   if(facilityId==='lng'){
     secondModel.userData.dynamic=true;
     secondModel.visible=false;
   }
-  if(second)k.board(group,facilityId==='combat'?'에어로 기술 제작소':facilityId==='lng'?'사업부 둘러보기':FACILITY[second].name,'E  가까이에서 살펴보기',4.5,2.2,1.1,2.8);
-  colliders.push({minX:3.6,maxX:5.6,minZ:.1,maxZ:2.1});
+  if(second)k.board(group,facilityId==='combat'?'에어로 기술 제작소':facilityId==='lng'?'사업부 둘러보기':FACILITY[second].name,'E  가까이에서 살펴보기',4.5,facilityId==='lng'?2.5:2.2,1.1,2.8);
+  colliders.push(facilityId==='lng'?{minX:3.36,maxX:5.84,minZ:-.14,maxZ:2.34}:{minX:3.6,maxX:5.6,minZ:.1,maxZ:2.1});
   const third=home?.topics[2];
-  if(third){iconModel(k,group,third,-4.9,1.05,-1.5,.38,animated);k.board(group,FACILITY[third].name,'E  가까이에서 살펴보기',-5,2.18,-1.5,2.8);}
+  if(third){
+    if(facilityId==='combat'){
+      k.cylinder(group,-4.9,.42,-1.5,1,1,.76,'#e6cfaa',20);
+      colliders.push({minX:-5.9,maxX:-3.9,minZ:-2.5,maxZ:-.5});
+    }
+    if(facilityId==='lng'){
+      k.cylinder(group,-5.35,.43,.6,1.08,1.08,.78,'#e6cfaa',20);
+      colliders.push({minX:-6.43,maxX:-4.27,minZ:-.48,maxZ:1.68});
+    }
+    const thirdModel=iconModel(k,group,third,facilityId==='lng'?-5.35:-4.9,facilityId==='lng'?.87:facilityId==='combat'?.9:1.05,facilityId==='lng'?.6:-1.5,.38,animated);
+    if(facilityId==='lng'){
+      thirdModel.userData.dynamic=true;thirdModel.visible=false;
+      modelDisplays.push({url:'/models/offshore_drillship.glb',mount:k.group(group,-5.35,0,.6),fallback:thirdModel,maxSize:[1.9,1.55,2.2],baseY:.86});
+    }
+    k.board(group,FACILITY[third].name,'E  가까이에서 살펴보기',facilityId==='lng'?-5.05:-5,facilityId==='lng'?2.85:2.47,facilityId==='lng'?.6:-1.5,facilityId==='lng'?2.3:2.8);
+  }
   const residentFallback=guide(k,group,-3,1.8,home?.residentColor||company.color,home?.resident);
   if(facilityId==='lng'||facilityId==='combat')residentFallback.visible=false;
   const resident=facilityId==='lng'||facilityId==='combat'
     ?{mount:residentFallback.parent,fallback:residentFallback,modelUrl:facilityId==='lng'?'/models/ocean_c.glb':'/models/robot_bird.glb',name:facilityId==='lng'?'파도':'모아'}
     :null;
   colliders.push({minX:-3.35,maxX:-2.65,minZ:1.45,maxZ:2.15});
-  k.board(group,home?`주민 ${home.resident}`:'안녕! 전시물에 다가가 봐요',home?'E 키로 주민과 이야기해요':'E 키로 기술 이야기를 열어요',-3,2.55,1.8,3.2);
+  k.board(group,home?`주민 ${home.resident}`:'안녕! 전시물에 다가가 봐요',home?'E 키로 주민과 이야기해요':'E 키로 기술 이야기를 열어요',facilityId==='lng'?-2.15:-3,2.55,1.8,facilityId==='lng'?2.8:3.2);
   planter(k,group,-6.15,-3.9,'#e4ae9f',1.6);planter(k,group,6.1,4.35,'#f2d58f',1.5);
   bench(k,group,-5.5,3.9,Math.PI/2);colliders.push({minX:-5.95,maxX:-5.05,minZ:2.8,maxZ:5});
   if(facilityId!=='lng'){
@@ -591,14 +619,14 @@ export function buildInterior(THREE, facilityId = 'radar') {
   const triggers=[{id:facilityId,type:'exit',x:0,z:5.5,radius:1}];
   const interactables=[{id:facilityId==='combat'?'aero-video':facilityId==='lng'?'ocean-video':facilityId,x:0,z:-1.7,radius:2.4,label:facilityId==='combat'?'E  한화에어로스페이스 소개 영상':facilityId==='lng'?'E  계열사 소개 영상':`E  ${primary.name} 살펴보기`}];
   if(second)interactables.push({id:facilityId==='combat'?'aero-exhibit':facilityId==='lng'?'ocean-divisions':second,x:4.6,z:1.1,radius:2.2,label:facilityId==='combat'?'E  에어로 기술 제작소 살펴보기':facilityId==='lng'?'E  사업부 둘러보기':`E  ${FACILITY[second].name} 살펴보기`});
-  if(third)interactables.push({id:third,x:-4.9,z:-1.4,radius:2.2,label:`E  ${FACILITY[third].name} 살펴보기`});
+  if(third)interactables.push({id:third,x:facilityId==='lng'?-5.35:-4.9,z:facilityId==='lng'?.6:-1.4,radius:2.2,label:`E  ${FACILITY[third].name} 살펴보기`});
   interactables.push({id:facilityId,type:'resident',x:-3,z:1.8,radius:1.55,label:`E  주민 ${home?.resident||'안내원'}과 이야기하기`});
   batchStatic(THREE,group,animated);
-  return {group,colliders,triggers,interactables,resident,oceanDivisionShip:facilityId==='lng'?{mount:group,fallback:secondModel}:null,spawn:{x:0,z:3.8},bounds:{minX:-7,maxX:7,minZ:-5,maxZ:6},animated,label:info.name};
+  return {group,colliders,triggers,interactables,resident,modelDisplays,oceanDivisionShip:facilityId==='lng'?{mount:group,fallback:secondModel}:null,spawn:{x:0,z:3.8},bounds:{minX:-7,maxX:7,minZ:-5,maxZ:6},animated,label:info.name};
 }
 
 function buildSystemsInterior(THREE) {
-  const k=kit(THREE),group=new THREE.Group(),animated=[],colliders=[];
+  const k=kit(THREE),group=new THREE.Group(),animated=[],colliders=[],modelDisplays=[];
   k.rounded(group,0,-.17,.5,14.8,.32,11.8,'#ba9874',.12);
   k.box(group,0,-.015,.5,14,.04,11,'#dfc69e');
   for(let i=-6;i<=6;i++)k.box(group,i,.012,.5,.025,.012,11,'#cdb48d');
@@ -608,7 +636,7 @@ function buildSystemsInterior(THREE) {
     k.rounded(group,side*7.2,1.8,.3,.3,3.8,11.2,'#f4ead4',.08);
     k.box(group,side*7.01,.4,.3,.08,.8,11.2,'#529b89');
   }
-  k.board(group,'시스템의 집','레이다 · 함정 전투체계 · 지상 시스템',0,3.05,-4.9,5.8);
+  k.board(group,'시스템의 집','AESA 레이다 · 함정 전투체계',0,3.05,-4.9,5.8);
   const rug=k.cylinder(group,0,.035,.6,3.3,3.3,.045,'#bbd5c4',40);rug.scale.z=.9;
   // Rear screen: the E interaction opens the supplied company video.
   k.rounded(group,0,.65,-2.8,3.2,1.3,1.4,'#c3a47b',.12);
@@ -623,17 +651,10 @@ function buildSystemsInterior(THREE) {
     k.box(group,x,.84,-.4,3.5,.08,3,'#ba9d75');
     colliders.push({minX:x-1.8,maxX:x+1.8,minZ:-1.95,maxZ:1.15});
   }
-  const tank=k.group(group,-4.5,.91,-.4);tank.name='K2 simplified educational model';tank.rotation.y=-.25;
-  k.rounded(tank,0,.3,0,2.65,.55,1.5,'#697a56',.1);
-  for(const side of[-1,1]){
-    k.rounded(tank,0,.15,side*.77,2.8,.46,.32,'#38473d',.1);
-    for(let i=0;i<6;i++){const wheel=k.cylinder(tank,-1.08+i*.43,.15,side*.95,.17,.17,.06,'#91a17c',10);wheel.rotation.x=Math.PI/2;}
-  }
-  k.rounded(tank,.1,.72,0,1.25,.5,1.05,'#7d8e65',.1);
-  const barrel=k.cylinder(tank,-1.07,.76,0,.075,.095,1.7,'#586c4b',10);barrel.rotation.z=Math.PI/2;
-  k.box(tank,.26,1.04,.2,.28,.18,.24,'#394e48');k.box(tank,.25,1.04,.33,.19,.1,.025,'#a8dad3');
-  k.cylinder(tank,.55,1.17,-.3,.025,.025,.65,'#4b5d4b',6);
-  k.board(group,'K2 흑표 · 사격통제','E  쉬운 설명 · 직접 체험 · 출처',-4.5,.48,1.22,3.2);
+  const radarFallback=iconModel(k,group,'radar',-4.5,.95,-.4,.6,animated);
+  radarFallback.userData.dynamic=true;radarFallback.visible=false;
+  modelDisplays.push({url:'/models/AESA_Radar.glb',mount:k.group(group,-4.5,0,-.4),fallback:radarFallback,maxSize:[2.6,1.8,2.5],baseY:.9});
+  k.board(group,'AESA 레이다','E  쉬운 설명 · 직접 체험 · 출처',-4.5,.48,1.22,3.2);
   const boat=k.group(group,4.5,.92,-.4);boat.name='PKMR simplified educational model';boat.rotation.y=-.25;
   const hull=new THREE.Shape();hull.moveTo(-1.65,0);hull.lineTo(-.9,-.66);hull.lineTo(1.5,-.58);hull.lineTo(1.5,.58);hull.lineTo(-.9,.66);hull.closePath();
   const hullMesh=k.mesh(boat,new THREE.ExtrudeGeometry(hull,{depth:.35,bevelEnabled:true,bevelSize:.08,bevelThickness:.07,bevelSegments:1,steps:1}),'#809aa3',0,.4,0);hullMesh.rotation.x=Math.PI/2;
@@ -644,6 +665,8 @@ function buildSystemsInterior(THREE) {
   k.cylinder(boat,-1.05,.58,0,.21,.25,.25,'#9fb1b4',10);
   const gun=k.cylinder(boat,-1.4,.71,0,.035,.05,.5,'#647b80',8);gun.rotation.z=Math.PI/2;
   for(const side of[-1,1])k.box(boat,1,.65,side*.3,.53,.25,.27,'#697e83');
+  boat.userData.dynamic=true;boat.visible=false;
+  modelDisplays.push({url:'/models/PKMR_Detailed.glb',mount:k.group(group,4.5,0,-.4),fallback:boat,maxSize:[3.1,1.8,1.2],baseY:.9,rotationY:Math.PI/2});
   k.board(group,'PKMR · 함정 전투체계','E  쉬운 설명 · 직접 체험 · 출처',4.5,.48,1.22,3.2);
   const resident=k.group(group,-2.3,0,2.45);resident.name='Hantori resident';resident.userData.dynamic=true;resident.userData.residentModel=true;
   const residentFallback=guide(k,resident,0,0,'#73b6a6','한토리');
@@ -655,10 +678,10 @@ function buildSystemsInterior(THREE) {
   k.board(group,'밖으로 나가기 ↓','문 앞까지 걸어가세요',0,.17,6.1,2.8).rotation.x=-Math.PI/3;
   const interactables=[
     {id:'systems-video',x:0,z:-2.7,radius:2.5,label:'E  전시물 살펴보기 · 한화시스템 소개 영상'},
-    {id:'systems-k2',x:-4.5,z:-.4,radius:2.8,label:'E  K2 흑표 · 사격통제시스템'},
+    {id:'systems-aesa',x:-4.5,z:-.4,radius:2.8,label:'E  AESA 레이다'},
     {id:'systems-pkmr',x:4.5,z:-.4,radius:2.8,label:'E  PKMR · 함정 전투체계'},
     {id:'launch',type:'resident',x:-2.3,z:2.45,radius:1.55,label:'E  한토리와 대화하기'}
   ];
   batchStatic(THREE,group,animated);
-  return {group,colliders,interactables,animated,systemsResident:{mount:resident,fallback:residentFallback},triggers:[{id:'launch',type:'exit',x:0,z:5.5,radius:1}],spawn:{x:0,z:3.8},bounds:{minX:-7,maxX:7,minZ:-5,maxZ:6},label:'시스템의 집'};
+  return {group,colliders,interactables,animated,modelDisplays,systemsResident:{mount:resident,fallback:residentFallback},triggers:[{id:'launch',type:'exit',x:0,z:5.5,radius:1}],spawn:{x:0,z:3.8},bounds:{minX:-7,maxX:7,minZ:-5,maxZ:6},label:'시스템의 집'};
 }

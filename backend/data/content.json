@@ -476,7 +476,7 @@
     {
       "id": "offshore",
       "companyId": "ocean",
-      "name": "해양설비 부두",
+      "name": "해양 플랜트",
       "subtitle": "바다에 에너지 작업장을 세워요",
       "icon": "offshore",
       "summary": "해양 생산설비는 바다에서 에너지를 생산·처리하거나 저장하는 일을 수행하는 시설이에요.",

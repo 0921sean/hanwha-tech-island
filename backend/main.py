@@ -53,7 +53,7 @@ class AskRequest(BaseModel):
     depth: Literal["intro", "detail"] = "intro"
     comparison: bool = False
     residentId: Literal["radar", "combat", "engine", "launch", "lng"] | None = None
-    audience: Literal["고객", "일반대중", "취준생", "신규입사자"] | None = None
+    audience: Literal["고객", "일반대중", "취준생"] | None = None
     history: list[ChatTurn] = Field(default_factory=list, max_length=10)
 
     @model_validator(mode="after")
@@ -118,7 +118,7 @@ answer must cite sourceIds. Use short plain Korean (intro) or fuller explanation
 Use the required JSON schema; unused explanation fields may be empty strings.
 The audience field is a validated presentation preference. For 고객 emphasize product roles,
 needs and support; for 일반대중 use accessible everyday Korean; for 취준생 connect public business
-areas to general skills; for 신규입사자 explain business relationships and common terms.
+areas to general skills.
 Label general learning or career suggestions as general advice, never official hiring criteria,
 internal organization, quality procedures or company policy. Ask for missing major/department/needs
 when needed; do not invent them. Do not claim confidential procedures or contract terms.
